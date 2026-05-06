@@ -11,51 +11,111 @@ const api = axios.create({
 });
 
 // =========================
+// AUTH INTERCEPTOR
+// =========================
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
+
+// =========================
+// RESPONSE NORMALIZER (NEW - IMPORTANT FIX)
+// =========================
+const normalize = (res) => {
+  return (
+    res?.data?.data ||
+    res?.data?.patients ||
+    res?.data?.results ||
+    res?.data ||
+    []
+  );
+};
+
+// =========================
 // PATIENT APIS
 // =========================
 
 // Get all patients
-export const getPatients = () => api.get("/patients");
+export const getPatients = async () => {
+  const res = await api.get("/patients");
+  return { data: normalize(res) };
+};
 
-// Get single patient by ID
-export const getPatient = (id) => api.get(`/patient/${id}`);
+// Get single patient
+export const getPatient = async (id) => {
+  const res = await api.get(`/patient/${id}`);
+  return { data: res?.data?.data || res?.data };
+};
 
-// Search patient by National ID
-export const searchPatientByNID = (nid) =>
-  api.get(`/patient/search/${nid}`);
+// =========================
+// SEARCH PATIENTS (FIXED)
+// =========================
+export const searchPatients = async (query) => {
+  const res = await api.get(`/patients/search?q=${query}`);
+
+  const data = normalize(res);
+
+  return { data };
+};
 
 // =========================
 // MEDICAL RECORDS
 // =========================
 
-// Get records for a patient
-export const getRecords = (patientId) =>
-  api.get(`/records/${patientId}`);
+export const getRecords = async (patientId) => {
+  const res = await api.get(`/records/${patientId}`);
+  return { data: normalize(res) };
+};
 
-// Add new medical record
 export const addRecord = (data) =>
   api.post("/add_record", data);
-
-export const getPharmacyRecordsByNID = (nid) =>
-  api.get(`/pharmacy/records/nid/${nid}`);
 
 // =========================
 // PHARMACY MODULE
 // =========================
 
-// Get pharmacy records for a patient
-export const getPharmacyRecords = (patientId) =>
-  api.get(`/pharmacy/records/${patientId}`);
+export const getPharmacyRecordsByNID = (nid) =>
+  api.get(`/pharmacy/records/nid/${nid}`);
 
-// Dispense medication (IMPORTANT FIX: lowercase path)
+export const getPharmacyRecords = async (patientId) => {
+  const res = await api.get(`/pharmacy/records/${patientId}`);
+  return { data: normalize(res) };
+};
+
 export const dispenseMedication = (recordId) =>
   api.put(`/pharmacy/dispense/${recordId}`);
 
-// pharmacy queue
 export const getPharmacyQueue = () =>
   api.get("/pharmacy/queue");
 
 // =========================
-// EXPORT DEFAULT (optional)
+// ADMIN MODULE
+// =========================
+
+export const getUsers = () => api.get("/admin/users");
+
+export const createUser = (data) =>
+  api.post("/admin/users", data);
+
+export const deleteUser = (id) =>
+  api.delete(`/admin/users/${id}`);
+
+export const getAdminPatient = (id) =>
+  api.get(`/admin/patient/${id}`);
+
+// =========================
+// AUTH
+// =========================
+
+export const loginUser = (data) =>
+  api.post("/login", data);
+
+// =========================
+// EXPORT
 // =========================
 export default api;

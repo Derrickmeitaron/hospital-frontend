@@ -1,75 +1,91 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import theme from "../theme";
 import {
   getPharmacyQueue,
-  getPharmacyRecordsByNID,
-  dispenseMedication
+  getRecords,
+  dispenseMedication,
+  searchPatients
 } from "../api";
 
 import notifySound from "../assets/notify.mp3";
 
 export default function Pharmacy() {
 
-  // =========================
-  // STATE
-  // =========================
   const [queue, setQueue] = useState([]);
   const [records, setRecords] = useState([]);
   const [patient, setPatient] = useState(null);
 
-  const [nationalId, setNationalId] = useState("");
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+
   const [mode, setMode] = useState("QUEUE");
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const [prevQueueLength, setPrevQueueLength] = useState(0);
+  const prevQueueLengthRef = useRef(0);
 
   // =========================
-  // LOAD QUEUE (REAL-TIME + SOUND)
+  // SORT
+  // =========================
+  const sortByCreatedAt = (data) => {
+    if (!Array.isArray(data)) return [];
+    return [...data].sort(
+      (a, b) => new Date(b.created_at) - new Date(a.created_at)
+    );
+  };
+
+  // =========================
+  // QUEUE
   // =========================
   const loadQueue = useCallback(async () => {
     try {
       const res = await getPharmacyQueue();
-      const newQueue = res.data;
 
-      // 🔔 alert when new patient arrives
-      if (newQueue.length > prevQueueLength) {
+      const sorted = sortByCreatedAt(res.data);
+
+      if (sorted.length > prevQueueLengthRef.current) {
         const audio = new Audio(notifySound);
         audio.play().catch(() => {});
       }
 
-      setQueue(newQueue);
-      setPrevQueueLength(newQueue.length);
+      setQueue(sorted);
+      prevQueueLengthRef.current = sorted.length;
 
     } catch (err) {
       console.error(err);
     }
-  }, [prevQueueLength]);
+  }, []);
 
   // =========================
-  // SEARCH BY NID
+  // SEARCH (UNIFIED)
   // =========================
-  const fetchByNID = useCallback(async () => {
+  const handleSearch = useCallback(async (text) => {
     try {
-      setLoading(true);
-      setError("");
+      if (!text.trim()) {
+        setResults([]);
+        return;
+      }
 
-      const res = await getPharmacyRecordsByNID(nationalId);
-
-      setPatient(res.data.patient);
-      setRecords(res.data.records);
-      setMode("SEARCH");
+      const res = await searchPatients(text);
+      setResults(res.data || []);
 
     } catch (err) {
       console.error(err);
-      setError("Patient not found");
-      setPatient(null);
-      setRecords([]);
-    } finally {
-      setLoading(false);
+      setResults([]);
     }
-  }, [nationalId]);
+  }, []);
+
+  // =========================
+  // SELECT PATIENT
+  // =========================
+  const selectPatient = async (p) => {
+    setPatient(p);
+    setQuery("");
+    setResults([]);
+
+    const res = await getRecords(p.id);
+    setRecords(sortByCreatedAt(res.data));
+
+    setMode("SEARCH");
+  };
 
   // =========================
   // DISPENSE
@@ -77,91 +93,42 @@ export default function Pharmacy() {
   const handleDispense = async (id) => {
     try {
       await dispenseMedication(id);
+      await loadQueue();
 
-      loadQueue();
-
-      if (mode === "SEARCH" && nationalId) {
-        fetchByNID();
+      if (patient) {
+        const res = await getRecords(patient.id);
+        setRecords(sortByCreatedAt(res.data));
       }
 
     } catch (err) {
       console.error(err);
-      alert("Failed to dispense medication");
     }
   };
 
   // =========================
-  // REAL-TIME QUEUE
+  // EFFECTS
   // =========================
   useEffect(() => {
     loadQueue();
-
     const interval = setInterval(loadQueue, 5000);
     return () => clearInterval(interval);
-
   }, [loadQueue]);
 
-  // =========================
-  // REAL-TIME SEARCH
-  // =========================
   useEffect(() => {
-    if (mode === "SEARCH" && nationalId) {
-      const interval = setInterval(fetchByNID, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [mode, nationalId, fetchByNID]);
+    const delay = setTimeout(() => {
+      handleSearch(query);
+    }, 400);
 
-  // =========================
-  // STYLES
-  // =========================
-  const styles = {
-    container: {
-      padding: "20px",
-      fontFamily: "Arial",
-      minHeight: "100vh"
-    },
-    header: {
-      fontSize: "24px",
-      fontWeight: "bold",
-      marginBottom: "20px"
-    },
-    button: {
-      padding: "10px 15px",
-      marginRight: "10px",
-      border: "none",
-      borderRadius: "5px",
-      cursor: "pointer",
-      backgroundColor: "#007bff",
-      color: "#fff"
-    },
-    card: {
-      backgroundColor: "#fff",
-      padding: "15px",
-      marginBottom: "10px",
-      borderRadius: "10px",
-      color: "#080202",
-      boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
-    },
-    input: {
-      padding: "10px",
-      width: "250px",
-      marginRight: "10px",
-      borderRadius: "5px",
-      border: "1px solid #ccc"
-    },
-    pending: { color: "orange", fontWeight: "bold" },
-    dispensed: { color: "green", fontWeight: "bold" }
-  };
+    return () => clearTimeout(delay);
+  }, [query, handleSearch]);
 
   // =========================
   // UI
   // =========================
   return (
     <div style={theme.container}>
-
       <div style={theme.header}>💊 Pharmacy Dashboard</div>
 
-      {/* MODE SWITCH */}
       <div style={{ marginBottom: "20px" }}>
         <button style={theme.button} onClick={() => setMode("QUEUE")}>
           Queue Mode
@@ -179,92 +146,83 @@ export default function Pharmacy() {
         <div>
           <h3>Live Queue</h3>
 
-          {queue.length === 0 && <p>No pending prescriptions</p>}
+          {queue.map((item) => (
+            <div key={item.id} style={theme.card}>
+              <p><b>{item.first_name} {item.last_name}</b></p>
+              <p><b>NID:</b> {item.national_id}</p>
+              <p><b>Diagnosis:</b> {item.diagnosis}</p>
+              <p><b>Prescription:</b> {item.prescription}</p>
 
-          {queue
-            .slice()
-            .reverse() // newest first
-            .map((item) => (
-              <div key={item.id} style={styles.card}>
-                <p><b>{item.first_name} {item.last_name}</b></p>
-                <p><b>NID:</b> {item.national_id}</p>
-                <p><b>Diagnosis:</b> {item.diagnosis}</p>
-                <p><b>Prescription:</b> {item.prescription}</p>
-
-                <p>
-                  <b>Status:</b>{" "}
-                  <span style={styles.pending}>{item.status}</span>
-                </p>
-
-                <button
-                  style={{ ...styles.button, backgroundColor: "green" }}
-                  onClick={() => handleDispense(item.id)}
-                >
-                  Dispense
-                </button>
-              </div>
-            ))}
-        </div>
-      )}
-
-      {/* =========================
-          SEARCH MODE
-      ========================= */}
-      {mode === "SEARCH" && (
-        <div>
-          <h3>Search Patient</h3>
-
-          <input
-            style={styles.input}
-            placeholder="Enter National ID"
-            value={nationalId}
-            onChange={(e) => setNationalId(e.target.value)}
-          />
-
-          <button style={styles.button} onClick={fetchByNID}>
-            Search
-          </button>
-
-          {loading && <p>Loading...</p>}
-          {error && <p style={{ color: "red" }}>{error}</p>}
-
-          {patient && (
-            <div style={styles.card}>
-              <h3>Patient Info</h3>
-              <p><b>Name:</b> {patient.first_name} {patient.last_name}</p>
-              <p><b>NID:</b> {patient.national_id}</p>
-            </div>
-          )}
-
-          {records.map((r) => (
-            <div key={r.id} style={styles.card}>
-              <p><b>Diagnosis:</b> {r.diagnosis}</p>
-              <p><b>Prescription:</b> {r.prescription}</p>
-
-              <p>
-                <b>Status:</b>{" "}
-                <span style={
-                  r.status === "PENDING"
-                    ? theme.pending
-                    : theme.dispensed
-                }>
-                  {r.status}
-                </span>
-              </p>
-
-              {r.status === "PENDING" && (
-                <button
-                  style={{ ...styles.button, backgroundColor: "green" }}
-                  onClick={() => handleDispense(r.id)}
-                >
-                  Dispense
-                </button>
-              )}
+              <button
+                style={{ ...theme.button, backgroundColor: "green" }}
+                onClick={() => handleDispense(item.id)}
+              >
+                Dispense
+              </button>
             </div>
           ))}
         </div>
       )}
 
+      {/* =========================
+          SEARCH MODE (UNIFIED)
+      ========================= */}
+      {mode === "SEARCH" && (
+        <div>
+          <h3>Search Patient</h3>
+
+          <div style={{ position: "relative" }}>
+            <input
+              className="input-animated"
+              placeholder="Search patient (name, ID, NID...)"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+
+            {results.length > 0 && (
+              <div style={{
+                position: "absolute",
+                background: "#fff",
+                border: "1px solid #ccc",
+                width: "100%",
+                zIndex: 999
+              }}>
+                {results.map((p) => (
+                  <div
+                    key={p.id}
+                    style={{ padding: "10px", cursor: "pointer" }}
+                    onClick={() => selectPatient(p)}
+                  >
+                    <b>{p.first_name} {p.last_name}</b>
+                    <div>ID: {p.id}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {patient && (
+            <div style={theme.card}>
+              <h3>Patient Info</h3>
+              <p>{patient.first_name} {patient.last_name}</p>
+            </div>
+          )}
+
+          {records.map((r) => (
+            <div key={r.id} style={theme.card}>
+              <p><b>Diagnosis:</b> {r.diagnosis}</p>
+              <p><b>Prescription:</b> {r.prescription}</p>
+
+              <button
+                style={{ ...theme.button, backgroundColor: "green" }}
+                onClick={() => handleDispense(r.id)}
+              >
+                Dispense
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

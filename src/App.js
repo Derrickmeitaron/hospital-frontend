@@ -1,20 +1,24 @@
 import "./App.css";
 import React, { useEffect, useState } from "react";
+import axios from "axios";
+
 import Header from "./components/Header";
 import theme from "./theme";
+import Login from "./components/Login";
 
 import {
   getPatients,
   getPatient,
   getRecords,
-  addRecord,
-  searchPatientByNID
+  addRecord
 } from "./api";
 
 import Pharmacy from "./components/Pharmacy";
 import Reception from "./components/Reception";
+import PatientSearch from "./components/PatientSearch";
 
 function App() {
+
   // =========================
   // STATE
   // =========================
@@ -26,103 +30,113 @@ function App() {
   const [testResults, setTestResults] = useState("");
   const [prescription, setPrescription] = useState("");
 
-  const [nid, setNid] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
   const [notifications, setNotifications] = useState(0);
 
   const [role, setRole] = useState(null);
   const [view, setView] = useState(null);
   const [showRecords, setShowRecords] = useState(false);
-  const isRecordValid =
-    diagnosis.trim().length > 0;
+
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState(false);
 
+  const [users, setUsers] = useState([]);
+  const [newUser, setNewUser] = useState({
+    username: "",
+    password: "",
+    role: "doctor"
+  });
+
+  const isRecordValid = diagnosis.trim().length > 0;
+
   // =========================
-  // LOAD USER ROLE
+  // AUTH INITIALIZATION (FIXED STABLE SYNC)
   // =========================
   useEffect(() => {
-    const savedRole = localStorage.getItem("role");
     const token = localStorage.getItem("token");
+    const savedRole = localStorage.getItem("role");
 
-    if (savedRole && token) {
-      setRole(savedRole);
+    if (!token) {
+      setRole(null);
+      setView("login");
+      return;
+    }
+
+    axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+
+    const allowedRoles = ["doctor", "reception", "pharmacy", "admin"];
+
+    setRole(savedRole);
+
+    if (allowedRoles.includes(savedRole)) {
       setView(savedRole);
     } else {
       setView("doctor");
     }
-  }, []);
+
+  }, [role]); // 🔥 FIX: ensures login updates reflect immediately
 
   // =========================
-  // FETCH PATIENTS
+  // FETCH PATIENTS (FIXED SAFE LOAD)
   // =========================
-  const fetchPatients = async () => {
-    try {
-      const res = await getPatients();
+  useEffect(() => {
+    const loadPatients = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return;
 
-      const sorted = Array.isArray(res.data)
-        ? [...res.data].sort(
-          (a, b) => new Date(b.created_at) - new Date(a.created_at)
-        )
-        : [];
+      try {
+        axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 
-      setPatients(sorted);
-    } catch (err) {
-      console.error("Error loading patients:", err);
-    }
-  };
-  // =========================
-  // SEARCH PATIENT
-  // =========================
-  const searchPatient = async () => {
-    try {
-      setLoading(true);
-      setError("");
+        const res = await getPatients();
 
-      const res = await searchPatientByNID(nid);
+        const sorted = Array.isArray(res?.data)
+          ? [...res.data].sort(
+              (a, b) => new Date(b.created_at) - new Date(a.created_at)
+            )
+          : [];
 
-      setSelectedPatient(res.data.patient);
-      setRecords(
-        Array.isArray(res.data.records)
-          ? [...res.data.records].sort(
-            (a, b) => new Date(b.created_at) - new Date(a.created_at)
-          )
-          : []
-      );
+        setPatients(sorted);
 
-    } catch (err) {
-      console.error(err);
-      setError("Patient not found");
-      setSelectedPatient(null);
-      setRecords([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+      } catch (err) {
+        console.error("Error loading patients:", err);
+      }
+    };
+
+    loadPatients();
+  }, [view]); // reload after login/view change
 
   // =========================
   // VIEW PATIENT
   // =========================
   const viewPatient = async (id) => {
+    if (!id) return;
+
     try {
+      setSelectedPatient(null);
+      setRecords([]);
+      setShowRecords(false);
+
       const res1 = await getPatient(id);
-      setSelectedPatient(res1.data);
+      setSelectedPatient(res1?.data || null);
 
       const res2 = await getRecords(id);
-      setRecords(
-        Array.isArray(res2.data)
-          ? [...res2.data].sort(
+
+      const sorted = Array.isArray(res2?.data)
+        ? [...res2.data].sort(
             (a, b) => new Date(b.created_at) - new Date(a.created_at)
           )
-          : []
-      );
+        : [];
+
+      setRecords(sorted);
+
     } catch (err) {
-      console.error("Error loading patient details:", err);
+      console.error("Error loading patient:", err);
     }
   };
+
+  // =========================
+  // AGE CALCULATION
+  // =========================
   const calculateAge = (dob) => {
     if (!dob) return null;
 
@@ -144,108 +158,170 @@ function App() {
   // =========================
   const handleAddRecord = async () => {
     try {
-      if (!selectedPatient) {
-        alert("Please select a patient first");
-        return;
-      }
+      if (!selectedPatient) return;
+      if (!diagnosis.trim()) return;
 
-      if (!diagnosis.trim()) {
-        alert("Diagnosis is required");
-        return;
-      }
-
-      // reset states before request
       setSaving(true);
       setSaveError(false);
       setSaveSuccess(false);
 
-      const payload = {
+      await addRecord({
         patient_id: selectedPatient.id,
         diagnosis,
         test_results: testResults,
         prescription
-      };
-
-      await addRecord(payload);
+      });
 
       const updated = await getRecords(selectedPatient.id);
 
-      const sortedRecords = Array.isArray(updated.data)
+      const sorted = Array.isArray(updated?.data)
         ? [...updated.data].sort(
-          (a, b) => new Date(b.created_at) - new Date(a.created_at)
-        )
+            (a, b) => new Date(b.created_at) - new Date(a.created_at)
+          )
         : [];
 
-      setRecords(sortedRecords);
-      // clear form
+      setRecords(sorted);
+
       setDiagnosis("");
       setTestResults("");
       setPrescription("");
 
-      // success state
       setSaveSuccess(true);
-      setSaveError(false);
-
       setTimeout(() => setSaveSuccess(false), 2000);
 
-    } catch (error) {
-      console.error(error);
-
-      // error state
+    } catch (err) {
+      console.error(err);
       setSaveError(true);
-      setSaveSuccess(false);
-
       setTimeout(() => setSaveError(false), 2500);
-
-      alert(error?.response?.data?.error || "Failed to save record");
-
     } finally {
       setSaving(false);
     }
-  }; // =========================
-  // LOAD PATIENTS ON START
-  // =========================
-  useEffect(() => {
-    fetchPatients();
-  }, []);
+  };
 
   // =========================
-  // VIEW SWITCHER
+  // ADMIN (UI ONLY)
+  // =========================
+  const handleCreateUser = () => {
+    if (!newUser.username || !newUser.password) return;
+
+    setUsers([...users, { ...newUser, id: Date.now() }]);
+
+    setNewUser({
+      username: "",
+      password: "",
+      role: "doctor"
+    });
+  };
+
+  const handleDeleteUser = (id) => {
+    setUsers(users.filter(u => u.id !== id));
+  };
+
+  // =========================
+  // VIEW SWITCH
   // =========================
   const renderView = () => {
-    if (view === "pharmacy") return <Pharmacy setNotifications={setNotifications} />;
-    if (view === "reception") return <Reception />;
 
+    if (view === "login") {
+      return <Login setRole={setRole} setView={setView} />;
+    }
+
+    if (view === "pharmacy") {
+      return <Pharmacy setNotifications={setNotifications} />;
+    }
+
+    if (view === "reception") {
+      return <Reception />;
+    }
+
+    if (view === "admin") {
+      return (
+        <div style={{ padding: "20px" }}>
+          <h2>👑 Admin Dashboard</h2>
+
+          <div className="card">
+            <h3>Create User</h3>
+
+            <input
+              placeholder="Username"
+              value={newUser.username}
+              onChange={(e) =>
+                setNewUser({ ...newUser, username: e.target.value })
+              }
+            />
+
+            <input
+              type="password"
+              placeholder="Password"
+              value={newUser.password}
+              onChange={(e) =>
+                setNewUser({ ...newUser, password: e.target.value })
+              }
+            />
+
+            <select
+              value={newUser.role}
+              onChange={(e) =>
+                setNewUser({ ...newUser, role: e.target.value })
+              }
+            >
+              <option value="doctor">Doctor</option>
+              <option value="reception">Reception</option>
+              <option value="pharmacy">Pharmacy</option>
+              <option value="admin">Admin</option>
+            </select>
+
+            <button style={theme.button} onClick={handleCreateUser}>
+              Create User
+            </button>
+          </div>
+
+          <div className="card">
+            <h3>Users</h3>
+
+            {users.length === 0 ? (
+              <p>No users yet</p>
+            ) : (
+              users.map((u) => (
+                <div key={u.id} className="record-card">
+                  <b>{u.username}</b> ({u.role})
+                  <button onClick={() => handleDeleteUser(u.id)}>
+                    Delete
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // =========================
+    // DOCTOR VIEW
+    // =========================
     return (
       <div className="doctor-layout">
 
-        {/* LEFT PANEL */}
         <div className="doctor-left">
 
           <div className="card">
             <h2>👨‍⚕️ Doctor Dashboard</h2>
 
             <div className="nav-buttons">
-              <button onClick={() => setView("doctor")}>Doctor</button>
-              <button onClick={() => setView("reception")}>Reception</button>
-              <button onClick={() => setView("pharmacy")}>Pharmacy</button>
+              {role === "admin" && (
+                <button onClick={() => setView("admin")}>Admin</button>
+              )}
             </div>
           </div>
 
-          <div className="card">
+          <div className="card" style={{ overflow: "visible" }}>
             <h3>🔍 Search Patient</h3>
 
-            <input
-              className="input-animated"
-              value={nid}
-              onChange={(e) => setNid(e.target.value)}
-              placeholder="Enter National ID"
-            />
-
-            <button onClick={searchPatient}>Search</button>
-
-            {loading && <p>Searching...</p>}
-            {error && <p style={{ color: "red" }}>{error}</p>}
+            <div style={{ position: "relative", zIndex: 20 }}>
+              <PatientSearch
+                onSelect={(patient) => viewPatient(patient.id)}
+              />
+            </div>
           </div>
 
           <div className="card">
@@ -255,17 +331,13 @@ function App() {
               {patients.map((p) => (
                 <div
                   key={p.id}
+                  className={`patient-card ${
+                    selectedPatient?.id === p.id ? "active-patient" : ""
+                  }`}
                   onClick={() => viewPatient(p.id)}
-                  className={`patient-card ${selectedPatient?.id === p.id ? "active-patient" : ""
-                    }`}
                 >
-                  <div className="patient-name">
-                    {p.first_name} {p.last_name}
-                  </div>
-
-                  <div className="patient-meta">
-                    ID: {p.id}
-                  </div>
+                  <b>{p.first_name} {p.last_name}</b>
+                  <div>ID: {p.id}</div>
                 </div>
               ))}
             </div>
@@ -273,7 +345,6 @@ function App() {
 
         </div>
 
-        {/* RIGHT PANEL */}
         <div className="doctor-right">
 
           <div className="card">
@@ -281,43 +352,10 @@ function App() {
 
             {selectedPatient ? (
               <>
-                <div className="patient-summary-card">
-
-                  <h2>🧾 Patient Profile</h2>
-
-                  <div className="patient-grid">
-
-                    <div className="patient-field">
-                      <span className="label">Full Name</span>
-                      <span className="value">
-                        {selectedPatient.first_name} {selectedPatient.last_name}
-                      </span>
-                    </div>
-
-                    <div className="patient-field">
-                      <span className="label">Age</span>
-                      <span className="value">
-                        {calculateAge(selectedPatient.date_of_birth)} years
-                      </span>
-                    </div>
-
-                    <div className="patient-field">
-                      <span className="label">Gender</span>
-                      <span className="value">
-                        {selectedPatient.gender || "Not set"}
-                      </span>
-                    </div>
-
-                    <div className="patient-field">
-                      <span className="label">National ID</span>
-                      <span className="value">
-                        {selectedPatient.national_id || "N/A"}
-                      </span>
-                    </div>
-
-                  </div>
-
-                </div>
+                <p><b>Name:</b> {selectedPatient.first_name} {selectedPatient.last_name}</p>
+                <p><b>Age:</b> {calculateAge(selectedPatient.date_of_birth)}</p>
+                <p><b>Gender:</b> {selectedPatient.gender}</p>
+                <p><b>National ID:</b> {selectedPatient.national_id || "N/A"}</p>
 
                 <h3>➕ Add Record</h3>
 
@@ -327,17 +365,15 @@ function App() {
                     <label>🩺 Diagnosis</label>
                     <textarea
                       className="clinical-input"
-                      placeholder="Enter clinical diagnosis..."
                       value={diagnosis}
                       onChange={(e) => setDiagnosis(e.target.value)}
                     />
                   </div>
 
                   <div className="clinical-block">
-                    <label>🧪 Test Results</label>
+                    <label>🔬 Test Results</label>
                     <textarea
                       className="clinical-input"
-                      placeholder="Enter lab/imaging results..."
                       value={testResults}
                       onChange={(e) => setTestResults(e.target.value)}
                     />
@@ -347,57 +383,52 @@ function App() {
                     <label>💊 Prescription</label>
                     <textarea
                       className="clinical-input"
-                      placeholder="Enter medication & dosage..."
                       value={prescription}
                       onChange={(e) => setPrescription(e.target.value)}
                     />
                   </div>
 
                 </div>
+
                 <button
-                  style={{
-                    ...theme.button,
-                    opacity: saving ? 0.7 : 1,
-                    cursor: saving ? "not-allowed" : "pointer",
-                    background: saveError
-                      ? "#dc2626"
-                      : saveSuccess
-                        ? "#16a34a"
-                        : "#2563eb"
-                  }}
                   onClick={handleAddRecord}
                   disabled={saving || !isRecordValid}
+                  style={{
+                    ...theme.button,
+                    background: saveError
+                      ? "red"
+                      : saveSuccess
+                      ? "green"
+                      : "#2563eb"
+                  }}
                 >
                   {saving
                     ? "Saving..."
                     : saveError
-                      ? "Failed ❌"
-                      : saveSuccess
-                        ? "Saved ✓"
-                        : "Save Record"}
+                    ? "Error"
+                    : saveSuccess
+                    ? "Saved"
+                    : "Save Record"}
                 </button>
-                {!isRecordValid && (
-                  <p style={{ color: "orange", fontSize: "12px" }}>
-                    Diagnosis is required to save record
-                  </p>
-                )}
+
               </>
             ) : (
-              <p>Select a patient to view details</p>
-            )}<br /><br />
+              <p>Select a patient</p>
+            )}
+
+            <br /><br /><br /><br />
 
             <button
-              style={{ ...theme.button, marginTop: "10px" }}
-              onClick={() => setShowRecords(!showRecords)}
+              style={theme.button}
+              onClick={() => setShowRecords(prev => !prev)}
             >
-              📜 Track Records
+              📜 Medical History
             </button>
+
             {showRecords && (
               <div style={{ marginTop: "15px" }}>
-                <h3>📜 Medical History</h3>
-
                 {records.length === 0 ? (
-                  <p>No records found</p>
+                  <p>No records</p>
                 ) : (
                   records.map((r) => (
                     <div key={r.id} className="record-card">
@@ -408,6 +439,7 @@ function App() {
                 )}
               </div>
             )}
+
           </div>
 
         </div>
@@ -416,9 +448,6 @@ function App() {
     );
   };
 
-  // =========================
-  // APP ROOT
-  // =========================
   return (
     <div>
       <Header notifications={notifications} />
