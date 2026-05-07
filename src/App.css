@@ -717,6 +717,7 @@ tr:hover {
     padding: 12px;
     text-align: center;
   }
+  
 
   .header-left {
     flex-direction: column;
@@ -801,4 +802,105 @@ tr:hover {
   backdrop-filter: blur(12px);
 
   border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+@media (max-width: 600px) {
+  .input-group {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .show-password {
+    margin-top: 6px;
+  }
+}
+/* =====================================================
+   SUPER MOBILE UPGRADE (SAFE LAYER - DO NOT MODIFY BASE)
+===================================================== */
+
+@media (max-width: 480px) {
+
+  /* GENERAL TOUCH IMPROVEMENTS */
+  body {
+    font-size: 15px;
+  }
+
+  button {
+    width: 100%;
+    margin-bottom: 8px;
+    font-size: 15px;
+    padding: 12px;
+  }
+
+  /* FIX INPUT SPACING */
+  .input-animated {
+    font-size: 16px;
+  }
+
+  /* LOGIN FIX */
+  .input-group {
+    width: 100%;
+  }
+
+  .show-password {
+    position: static !important;
+    transform: none !important;
+    margin-top: 6px;
+    display: inline-block;
+  }
+
+  /* PHARMACY / QUEUE BUTTON SPACING */
+  .nav-buttons {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* HEADER CLEAN MOBILE VIEW */
+  .app-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 10px;
+  }
+
+  .header-right {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  /* ADMIN DASHBOARD FIX */
+  #admin-dashboard .admin-user-row {
+    grid-template-columns: 1fr;
+    text-align: left;
+    gap: 8px;
+  }
+
+  /* PATIENT LIST MOBILE */
+  .patient-list {
+    max-height: none;
+  }
+
+  .patient-card {
+    padding: 12px;
+    font-size: 14px;
+  }
+
+  /* CLINICAL SECTIONS STACK NICELY */
+  .clinical-section {
+    gap: 10px;
+  }
+
+  .clinical-block {
+    padding: 10px;
+  }
+
+  /* RECORD CARDS */
+  .record-card {
+    font-size: 14px;
+  }
+
+  /* FOOTER SAFE SPACE */
+  .app-footer {
+    font-size: 11px;
+    padding: 8px;
+  }
 }
