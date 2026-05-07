@@ -130,13 +130,14 @@ export default function Pharmacy() {
       <div style={theme.header}>💊 Pharmacy Dashboard</div>
 
       <div style={{ marginBottom: "20px" }}>
-        <button style={theme.button} onClick={() => setMode("QUEUE")}>
-          Queue Mode
-        </button>
-
-        <button style={theme.button} onClick={() => setMode("SEARCH")}>
-          Search Mode
-        </button>
+        <div className="nav-buttons">
+          <button style={theme.button} onClick={() => setMode("QUEUE")}>
+            Queue Mode
+          </button>
+          <button style={theme.button} onClick={() => setMode("SEARCH")}>
+            Search Mode
+          </button>
+        </div>
       </div>
 
       {/* =========================
