@@ -187,13 +187,11 @@ export default function Login({ setRole, setView }) {
             <div style={styles.passwordWrapper}>
               <input
                 className="rainbow-input"
-                style={styles.input}
+                style={styles.passwordInput}
                 type={showPassword ? "text" : "password"}
                 placeholder="Enter password"
                 value={password}
-                onChange={(e) =>
-                  setPassword(e.target.value)
-                }
+                onChange={(e) => setPassword(e.target.value)}
               />
 
               <button
@@ -276,6 +274,7 @@ const styles = {
     color: "#444"
   },
 
+  /* ✅ FIXED INPUT (merged properly) */
   input: {
     width: "100%",
     padding: "11px",
@@ -286,30 +285,33 @@ const styles = {
     boxSizing: "border-box"
   },
 
+  /* password wrapper */
   passwordWrapper: {
-    position: "relative"
+    position: "relative",
+    width: "100%",
+    display: "flex",
+    alignItems: "center"
+  },
+
+  /* IMPORTANT: applies ONLY inside password field */
+  passwordInput: {
+    width: "100%",
+    padding: "11px 70px 11px 11px", // space for toggle button
+    borderRadius: "8px",
+    border: "1px solid #ccc",
+    outline: "none",
+    fontSize: "14px",
+    boxSizing: "border-box"
   },
 
   toggle: {
     position: "absolute",
     right: "10px",
-    top: "10px",
+    background: "none",
     border: "none",
-    background: "transparent",
-    cursor: "pointer",
+    color: "#2563eb",
     fontSize: "12px",
-    color: "#2563eb"
-  },
-
-  button: {
-    width: "100%",
-    padding: "11px",
-    borderRadius: "8px",
-    border: "none",
-    background: "#2563eb",
-    color: "white",
-    fontWeight: "bold",
-    fontSize: "14px"
+    cursor: "pointer"
   },
 
   errorBox: {
