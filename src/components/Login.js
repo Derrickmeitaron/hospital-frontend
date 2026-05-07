@@ -274,8 +274,10 @@ const styles = {
   /* ✅ FIXED INPUT (merged properly) */
 
   /* password wrapper */
- passwordWrapper: {
-  position: "relative",
+passwordWrapper: {
+  display: "flex",
+  alignItems: "center",
+  gap: "10px",
   width: "100%"
 },
 
@@ -284,6 +286,7 @@ input: {
   padding: "11px",
   borderRadius: "8px",
   border: "1px solid #ccc",
+  outline: "none",
   fontSize: "14px",
   boxSizing: "border-box"
 },
@@ -299,20 +302,15 @@ passwordInput: {
 },
 
 toggleOutside: {
-  position: "absolute",
-  right: "10px",
-  top: "50%",
-  transform: "translateY(-50%)",
-
-  padding: "4px 8px",
-  borderRadius: "6px",
+  padding: "10px 12px",
+  borderRadius: "8px",
   border: "1px solid #2563eb",
   background: "#fff",
   color: "#2563eb",
-  fontSize: "12px",
-  cursor: "pointer"
+  cursor: "pointer",
+  whiteSpace: "nowrap"
 },
-  errorBox: {
+errorBox: {
     marginTop: "12px",
     padding: "10px",
     background: "#fee2e2",
