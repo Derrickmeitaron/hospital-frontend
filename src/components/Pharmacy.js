@@ -9,7 +9,7 @@ import {
 
 import notifySound from "../assets/notify.mp3";
 
-export default function Pharmacy() {
+export default function Pharmacy({ setNotifications }) {
 
   const [queue, setQueue] = useState([]);
   const [records, setRecords] = useState([]);
@@ -41,19 +41,23 @@ export default function Pharmacy() {
 
       const sorted = sortByCreatedAt(res.data);
 
+      // play sound if new patient added
       if (sorted.length > prevQueueLengthRef.current) {
         const audio = new Audio(notifySound);
-        audio.play().catch(() => {});
+        audio.play().catch(() => { });
       }
 
       setQueue(sorted);
+
+      // 🔔 UPDATE HEADER NOTIFICATIONS
+      setNotifications(sorted.length);
+
       prevQueueLengthRef.current = sorted.length;
 
     } catch (err) {
       console.error(err);
     }
-  }, []);
-
+  }, [setNotifications]);
   // =========================
   // SEARCH (UNIFIED)
   // =========================

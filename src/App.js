@@ -659,7 +659,7 @@ function App() {
 
       <div className="app-footer">
         <span>
-          Built by Your Derrick Meitaron © {new Date().getFullYear()}
+          Built by  Derrick Meitaron © {new Date().getFullYear()}
         </span>
       </div>
 
