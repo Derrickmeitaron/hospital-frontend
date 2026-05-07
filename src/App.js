@@ -398,7 +398,7 @@ function App() {
               }}
             >
               {patients.map((p) => (
-                
+
                 <div
                   key={p.id}
                   className="patient-card"
@@ -638,13 +638,20 @@ function App() {
   };
 
   return (
-    <div>
-      <Header
-        notifications={notifications}
-        role={role}
-        setView={setView}
-      />
-      {renderView()}
+    <div className="app-container">
+
+      <Header notifications={notifications} role={role} setView={setView} />
+
+      <div className="app-content">
+        {renderView()}
+      </div>
+
+      <div className="app-footer">
+        <span>
+          Built by Your Derrick Meitaron © {new Date().getFullYear()}
+        </span>
+      </div>
+
     </div>
   );
 }
