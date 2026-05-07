@@ -180,13 +180,11 @@ export default function Login({ setRole, setView }) {
 
           {/* PASSWORD */}
           <div style={styles.inputGroup}>
-            <label style={styles.label}>
-              Password
-            </label>
+            <label style={styles.label}>Password</label>
 
             <div style={styles.passwordWrapper}>
+
               <input
-                className="rainbow-input"
                 style={styles.passwordInput}
                 type={showPassword ? "text" : "password"}
                 placeholder="Enter password"
@@ -196,13 +194,12 @@ export default function Login({ setRole, setView }) {
 
               <button
                 type="button"
-                onClick={() =>
-                  setShowPassword(!showPassword)
-                }
-                style={styles.toggle}
+                onClick={() => setShowPassword(!showPassword)}
+                style={styles.toggleOutside}
               >
                 {showPassword ? "Hide" : "Show"}
               </button>
+
             </div>
           </div>
 
@@ -275,45 +272,46 @@ const styles = {
   },
 
   /* ✅ FIXED INPUT (merged properly) */
-  input: {
-    width: "100%",
-    padding: "11px",
-    borderRadius: "8px",
-    border: "1px solid #ccc",
-    outline: "none",
-    fontSize: "14px",
-    boxSizing: "border-box"
-  },
 
   /* password wrapper */
-  passwordWrapper: {
-    position: "relative",
-    width: "100%",
-    display: "flex",
-    alignItems: "center"
-  },
+ passwordWrapper: {
+  position: "relative",
+  width: "100%"
+},
 
-  /* IMPORTANT: applies ONLY inside password field */
-  passwordInput: {
-    width: "100%",
-    padding: "11px 70px 11px 11px", // space for toggle button
-    borderRadius: "8px",
-    border: "1px solid #ccc",
-    outline: "none",
-    fontSize: "14px",
-    boxSizing: "border-box"
-  },
+input: {
+  flex: 1,
+  padding: "11px",
+  borderRadius: "8px",
+  border: "1px solid #ccc",
+  fontSize: "14px",
+  boxSizing: "border-box"
+},
+passwordInput: {
+  width: "100%",
+  padding: "11px",
+  paddingRight: "80px", // space for button
+  borderRadius: "8px",
+  border: "1px solid #ccc",
+  outline: "none",
+  fontSize: "14px",
+  boxSizing: "border-box"
+},
 
-  toggle: {
-    position: "absolute",
-    right: "10px",
-    background: "none",
-    border: "none",
-    color: "#2563eb",
-    fontSize: "12px",
-    cursor: "pointer"
-  },
+toggleOutside: {
+  position: "absolute",
+  right: "10px",
+  top: "50%",
+  transform: "translateY(-50%)",
 
+  padding: "4px 8px",
+  borderRadius: "6px",
+  border: "1px solid #2563eb",
+  background: "#fff",
+  color: "#2563eb",
+  fontSize: "12px",
+  cursor: "pointer"
+},
   errorBox: {
     marginTop: "12px",
     padding: "10px",
