@@ -134,7 +134,13 @@ function App() {
 
     loadUsers();
   }, [view]);
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
 
+    setRole(null);
+    setView("login");
+  };
   // =========================
   // VIEW PATIENT
   // =========================
@@ -640,7 +646,12 @@ function App() {
   return (
     <div className="app-container">
 
-      <Header notifications={notifications} role={role} setView={setView} />
+      <Header
+        notifications={notifications}
+        role={role}
+        setView={setView}
+        logout={handleLogout}
+      />
 
       <div className="app-content">
         {renderView()}

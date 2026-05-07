@@ -1,19 +1,9 @@
 import React from "react";
 import logo from "../assets/logo.png";
 
-export default function Header({ notifications = 0, role, setView }) {
-  console.log("HEADER ROLE:", role);
+export default function Header({ notifications = 0, role, setView, logout }) {
+  
 
-  const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
-
-    if (setView) {
-      setView("login");
-    } else {
-      window.location.reload();
-    }
-  };
 
   return (
     <div className="app-header">
