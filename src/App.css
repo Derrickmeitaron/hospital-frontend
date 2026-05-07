@@ -904,3 +904,18 @@ tr:hover {
     padding: 8px;
   }
 }
+@media (max-width: 600px) {
+
+  .nav-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .nav-buttons button {
+    width: 100%;
+    margin: 0;
+  }
+
+}

@@ -185,6 +185,7 @@ export default function Login({ setRole, setView }) {
             <div style={styles.passwordWrapper}>
 
               <input
+                className="rainbow-input"
                 style={styles.passwordInput}
                 type={showPassword ? "text" : "password"}
                 placeholder="Enter password"
