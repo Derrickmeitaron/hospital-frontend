@@ -24,16 +24,17 @@ api.interceptors.request.use((config) => {
 });
 
 // =========================
-// RESPONSE NORMALIZER (NEW - IMPORTANT FIX)
+// SAFE RESPONSE NORMALIZER
 // =========================
 const normalize = (res) => {
-  return (
+  const raw =
     res?.data?.data ||
     res?.data?.patients ||
     res?.data?.results ||
     res?.data ||
-    []
-  );
+    [];
+
+  return Array.isArray(raw) ? raw : [];
 };
 
 // =========================
@@ -43,77 +44,146 @@ const normalize = (res) => {
 // Get all patients
 export const getPatients = async () => {
   const res = await api.get("/patients");
-  return { data: normalize(res) };
+
+  return {
+    data: normalize(res)
+  };
 };
 
 // Get single patient
 export const getPatient = async (id) => {
   const res = await api.get(`/patient/${id}`);
-  return { data: res?.data?.data || res?.data };
+
+  return {
+    data: res?.data?.data || res?.data || null
+  };
 };
 
 // =========================
-// SEARCH PATIENTS (FIXED)
+// SEARCH PATIENTS
 // =========================
 export const searchPatients = async (query) => {
-  const res = await api.get(`/patients/search?q=${query}`);
+  const res = await api.get(
+    `/patients/search?q=${encodeURIComponent(query)}`
+  );
 
-  const data = normalize(res);
-
-  return { data };
+  return {
+    data: normalize(res)
+  };
 };
 
 // =========================
 // MEDICAL RECORDS
 // =========================
-
 export const getRecords = async (patientId) => {
   const res = await api.get(`/records/${patientId}`);
-  return { data: normalize(res) };
+
+  return {
+    data: normalize(res)
+  };
 };
 
-export const addRecord = (data) =>
-  api.post("/add_record", data);
+export const addRecord = async (data) => {
+  const res = await api.post("/add_record", data);
+
+  return {
+    data: res?.data || {}
+  };
+};
 
 // =========================
 // PHARMACY MODULE
 // =========================
+export const getPharmacyRecordsByNID = async (nid) => {
+  const res = await api.get(
+    `/pharmacy/records/nid/${encodeURIComponent(nid)}`
+  );
 
-export const getPharmacyRecordsByNID = (nid) =>
-  api.get(`/pharmacy/records/nid/${nid}`);
+  return {
+    data: res?.data || {}
+  };
+};
 
 export const getPharmacyRecords = async (patientId) => {
   const res = await api.get(`/pharmacy/records/${patientId}`);
-  return { data: normalize(res) };
+
+  return {
+    data: normalize(res)
+  };
 };
 
-export const dispenseMedication = (recordId) =>
-  api.put(`/pharmacy/dispense/${recordId}`);
+export const dispenseMedication = async (recordId) => {
+  const res = await api.put(`/pharmacy/dispense/${recordId}`);
 
-export const getPharmacyQueue = () =>
-  api.get("/pharmacy/queue");
+  return {
+    data: res?.data || {}
+  };
+};
+
+export const getPharmacyQueue = async () => {
+  const res = await api.get("/pharmacy/queue");
+
+  return {
+    data: normalize(res)
+  };
+};
 
 // =========================
 // ADMIN MODULE
 // =========================
 
-export const getUsers = () => api.get("/admin/users");
+// Get all users (FIXED SAFE VERSION)
+export const getUsers = async () => {
+  const res = await api.get("/admin/users");
 
-export const createUser = (data) =>
-  api.post("/admin/users", data);
+  const raw =
+    res?.data?.data ||
+    res?.data?.users ||
+    res?.data ||
+    [];
 
-export const deleteUser = (id) =>
-  api.delete(`/admin/users/${id}`);
+  return {
+    data: Array.isArray(raw) ? raw : []
+  };
+};
 
-export const getAdminPatient = (id) =>
-  api.get(`/admin/patient/${id}`);
+// Create user
+export const createUser = async (data) => {
+  const res = await api.post("/admin/users", data);
+
+  return {
+    data: res?.data || {}
+  };
+};
+
+// Delete user
+export const deleteUser = async (id) => {
+  const res = await api.delete(`/admin/users/${id}`);
+
+  return {
+    data: res?.data || {}
+  };
+};
+
+// Admin patient view
+export const getAdminPatient = async (id) => {
+  const res = await api.get(`/admin/patient/${id}`);
+
+  return {
+    data: res?.data || {}
+  };
+};
 
 // =========================
 // AUTH
 // =========================
+export const loginUser = async (data) => {
+  const res = await api.post("/login", data);
 
-export const loginUser = (data) =>
-  api.post("/login", data);
+  return {
+    data: res?.data || {}
+  };
+};
 
 // =========================
 // EXPORT

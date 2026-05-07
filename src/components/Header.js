@@ -1,13 +1,18 @@
 import React from "react";
 import logo from "../assets/logo.png";
 
-export default function Header({ notifications = 0 }) {
-
-  const role = localStorage.getItem("role") || "Guest";
+export default function Header({ notifications = 0, role, setView }) {
+  console.log("HEADER ROLE:", role);
 
   const logout = () => {
-    localStorage.clear();
-    window.location.reload();
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+
+    if (setView) {
+      setView("login");
+    } else {
+      window.location.reload();
+    }
   };
 
   return (
@@ -25,26 +30,40 @@ export default function Header({ notifications = 0 }) {
 
       {/* CENTER */}
       <div className="header-center">
-        <span className="role-badge">👤 {role.toUpperCase()}</span>
+        <span className="role-badge">
+          👤 {role ? role.toUpperCase() : "GUEST"}
+        </span>
       </div>
 
       {/* RIGHT */}
       <div className="header-right">
 
-        <div className="notif">
-          🔔
+        {/* PHARMACY ONLY NOTIFICATIONS */}
+        {role === "pharmacy" && (
+          <div className="notif">
+            🔔
 
-          {notifications > 0 && (
-            <span className="notif-badge">{notifications}</span>
-          )}
-        </div>
+            {notifications > 0 && (
+              <span className="notif-badge">
+                {notifications}
+              </span>
+            )}
+          </div>
+        )}
 
-        <button className="logout-btn" onClick={logout}>
-          Logout
-        </button>
+        {/* LOGOUT ONLY WHEN LOGGED IN */}
+        {role && role !== "login" && (
+          <button className="logout-btn" onClick={logout}>
+            Logout
+          </button>
+        )}
+        
 
       </div>
+      
 
     </div>
+    
   );
+  
 }

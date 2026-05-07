@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 
-export default function Login({ setRole }) {
+export default function Login({ setRole, setView }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
@@ -14,17 +14,29 @@ export default function Login({ setRole }) {
       setError("");
       setLoading(true);
 
-      const res = await axios.post("https://derrick.alwaysdata.net/login", {
-        username,
-        password
-      });
+      const res = await axios.post(
+        "https://derrick.alwaysdata.net/login",
+        {
+          username,
+          password
+        }
+      );
 
       const { token, role } = res.data;
 
       localStorage.setItem("token", token);
       localStorage.setItem("role", role);
 
+      // IMPORTANT FIX
+      axios.defaults.headers.common[
+        "Authorization"
+      ] = `Bearer ${token}`;
+
       setRole(role);
+
+      if (setView) {
+        setView(role);
+      }
 
     } catch (err) {
       setError(
@@ -36,87 +48,214 @@ export default function Login({ setRole }) {
   };
 
   return (
-    <div className={`login-card ${error ? "error-shake" : ""}`} style={{ maxWidth: "350px", margin: "100px auto" }}>
-      <div style={styles.card}>
+    <>
+      {/* RAINBOW + ANIMATIONS */}
+      <style>
+        {`
+          @keyframes rainbowGlow {
+            0% {
+              box-shadow:
+                0 0 5px #ff0000,
+                0 0 10px #ff0000;
+              border-color: #ff0000;
+            }
 
-        <h2 style={styles.title}>🏥 Hospital System Login</h2>
-        <p style={styles.subtitle}>Sign in to continue</p>
+            20% {
+              box-shadow:
+                0 0 5px #ff9900,
+                0 0 10px #ff9900;
+              border-color: #ff9900;
+            }
 
-        <div style={styles.inputGroup}>
-          <label style={styles.label}>Username</label>
-          <input
-            style={styles.input}
-            placeholder="Enter username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-        </div>
+            40% {
+              box-shadow:
+                0 0 5px #00ff00,
+                0 0 10px #00ff00;
+              border-color: #00ff00;
+            }
 
-        <div style={styles.inputGroup}>
-          <label style={styles.label}>Password</label>
+            60% {
+              box-shadow:
+                0 0 5px #00ccff,
+                0 0 10px #00ccff;
+              border-color: #00ccff;
+            }
 
-          <div style={styles.passwordWrapper}>
+            80% {
+              box-shadow:
+                0 0 5px #6600ff,
+                0 0 10px #6600ff;
+              border-color: #6600ff;
+            }
+
+            100% {
+              box-shadow:
+                0 0 5px #ff00cc,
+                0 0 10px #ff00cc;
+              border-color: #ff00cc;
+            }
+          }
+
+          @keyframes fadeSlideIn {
+            from {
+              opacity: 0;
+              transform: translateY(20px);
+            }
+
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+
+          @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+          }
+
+          .login-card {
+            animation: fadeSlideIn 0.5s ease;
+          }
+
+          .error-shake {
+            animation: shake 0.3s;
+          }
+
+          .rainbow-input {
+            transition: all 0.25s ease;
+          }
+
+          .rainbow-input:focus {
+            animation: rainbowGlow 2s linear infinite;
+            transform: translateY(-1px);
+          }
+
+          .login-button {
+            transition: all 0.2s ease;
+          }
+
+          .login-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+          }
+        `}
+      </style>
+
+      <div
+        className={`login-card ${error ? "error-shake" : ""}`}
+        style={{
+          maxWidth: "350px",
+          margin: "100px auto"
+        }}
+      >
+        <div style={styles.card}>
+
+          <h2 style={styles.title}>
+            🏥 Hospital System Login
+          </h2>
+
+          <p style={styles.subtitle}>
+            Sign in to continue
+          </p>
+
+          {/* USERNAME */}
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>
+              Username
+            </label>
+
             <input
+              className="rainbow-input"
               style={styles.input}
-              type={showPassword ? "text" : "password"}
-              placeholder="Enter password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter username"
+              value={username}
+              onChange={(e) =>
+                setUsername(e.target.value)
+              }
             />
-
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              style={styles.toggle}
-            >
-              {showPassword ? "Hide" : "Show"}
-            </button>
           </div>
+
+          {/* PASSWORD */}
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>
+              Password
+            </label>
+
+            <div style={styles.passwordWrapper}>
+              <input
+                className="rainbow-input"
+                style={styles.input}
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter password"
+                value={password}
+                onChange={(e) =>
+                  setPassword(e.target.value)
+                }
+              />
+
+              <button
+                type="button"
+                onClick={() =>
+                  setShowPassword(!showPassword)
+                }
+                style={styles.toggle}
+              >
+                {showPassword ? "Hide" : "Show"}
+              </button>
+            </div>
+          </div>
+
+          {/* LOGIN BUTTON */}
+          <button
+            className="login-button"
+            onClick={handleLogin}
+            disabled={
+              loading ||
+              !username ||
+              !password
+            }
+            style={{
+              ...styles.button,
+              opacity: loading ? 0.7 : 1,
+              cursor: loading
+                ? "not-allowed"
+                : "pointer"
+            }}
+          >
+            {loading
+              ? "Signing in..."
+              : "Login"}
+          </button>
+
+          {/* ERROR */}
+          {error && (
+            <div style={styles.errorBox}>
+              {error}
+            </div>
+          )}
+
         </div>
-
-        <button
-          onClick={handleLogin}
-          disabled={loading || !username || !password}
-          style={{
-            ...styles.button,
-            opacity: loading ? 0.7 : 1,
-            cursor: loading ? "not-allowed" : "pointer"
-          }}
-        >
-          {loading ? "Signing in..." : "Login"}
-        </button>
-
-        {error && (
-          <div style={styles.errorBox}>
-            {error}
-          </div>
-        )}
-
       </div>
-    </div>
+    </>
   );
 }
 
 const styles = {
-  page: {
-    minHeight: "100vh",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    background: "linear-gradient(135deg, #0f172a, #1e293b)"
-  },
-
   card: {
     width: "360px",
     padding: "30px",
-    borderRadius: "12px",
+    borderRadius: "14px",
     background: "#ffffff",
     boxShadow: "0 10px 30px rgba(0,0,0,0.2)"
   },
 
   title: {
     marginBottom: "5px",
-    textAlign: "center"
+    textAlign: "center",
+    color: "#111827"
   },
 
   subtitle: {
@@ -139,10 +278,12 @@ const styles = {
 
   input: {
     width: "100%",
-    padding: "10px",
+    padding: "11px",
     borderRadius: "8px",
     border: "1px solid #ccc",
-    outline: "none"
+    outline: "none",
+    fontSize: "14px",
+    boxSizing: "border-box"
   },
 
   passwordWrapper: {
@@ -152,7 +293,7 @@ const styles = {
   toggle: {
     position: "absolute",
     right: "10px",
-    top: "8px",
+    top: "10px",
     border: "none",
     background: "transparent",
     cursor: "pointer",
@@ -162,14 +303,14 @@ const styles = {
 
   button: {
     width: "100%",
-    padding: "10px",
+    padding: "11px",
     borderRadius: "8px",
     border: "none",
     background: "#2563eb",
     color: "white",
-    fontWeight: "bold"
+    fontWeight: "bold",
+    fontSize: "14px"
   },
-  
 
   errorBox: {
     marginTop: "12px",
